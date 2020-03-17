@@ -52,5 +52,19 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 function generateRandomString() {
-
+	const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+	const string_length = 6;
+	let randomstring = '';
+	for (let i=0; i<string_length; i++) {
+		let rnum = Math.floor(Math.random() * chars.length);
+		randomstring += chars.substring(rnum,rnum+1);
+	}
+return urlDatabase.randomstring = '';
 }
+
+app.get("/u/:shortURL", (req, res) => {
+  let shortURLReq = req.params.shortURL;
+  const longURL = urlDatabase[shortURLReq];
+  console.log(longURL)
+  res.redirect(longURL);
+});
