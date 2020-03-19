@@ -40,8 +40,8 @@ router.get("/hello", (req, res) => {
 
 ///////////////URL_INDEX//////////////////////////
 router.get("/urls", (req, res) => {
- const user = req.cookies["username"]; 
- console.log(user)
+ const user = req.cookies["user_id"]; 
+ console.log(user);
   if (!user) {
     return res.redirect("/login");
   }
@@ -54,18 +54,18 @@ router.get("/urls", (req, res) => {
 
 ///////////////URL_NEW//////////////////////////
 router.get("/urls/new", (req, res) => {
-  if (!req.cookies["username"]) {
+  if (!req.cookies["user_id"]) {
     res.redirect("/login");
   } else {
-    res.render("urls_new", { user: users[(req.cookies["username"])] });
+    res.render("urls_new", { user: users[(req.cookies["user_id"])] });
   }
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-//NEW AND SHOW
 
+////////////////NEW AND SHOW//////////////////
 router.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[shortURL], user: users[(req.cookies["username"])] };
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[shortURL], user: users[(req.cookies["user_id"])] };
   for (let shortURL in urlDatabase) {
     if (shortURL === req.params.shortURL) {
       longUrl = urlDatabase[shortURL];
@@ -90,7 +90,7 @@ router.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL].longURL = req.body.longURL;
-  urlDatabase[shortURL].userID = req.cookies["username"];
+  urlDatabase[shortURL].userID = req.cookies["user_id"];
   res.redirect(`/urls/${shortURL}`);
 })
 
@@ -120,6 +120,7 @@ router.post("/urls/:shortURL/delete", (req, res) => {
 //   urlDatabase[shortURL] = longURL;
 //   res.send("Ok");
 // });
+
 function generateRandomString() {
   const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
   const string_length = 6;
@@ -131,37 +132,43 @@ function generateRandomString() {
   return urlDatabase.randomstring = '';
 }
 
-///////////////LOGIN//////////////////////////
+///////////////LOGIN PAGE//////////////////////////
 router.get("/login", (req, res) => {
-  res.render("login", { user: req.cookies["username"] });
+  res.render("login", { user: req.cookies["user_id"] });
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
-  for (key in users) {
-    if (users[key].email === email) {
-      console.log('email is correct:', email);
-      if (users[key].password === password) {
+  const userId = emailLookout(email);
+  console.log('email exists:', email);
+  console.log('user exists:', userId);
+    if (userId && users[key].password === password) {
         console.log('password is correct:', password);
-        res.cookie("username", email);
+        res.cookie("user_id", email);
         res.redirect("/urls");
-      }
     } else {
       res.send("Incorrect username and/or password!");
     }
-  } 
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
+const emailLookup = () => {
+  for (key in users) {
+    if (users[key].email === email) {
+      return key;
+    }
+  }
+  return false;
+}
 
 router.post("/logout", function (req, res) {
- res.clearCookie('username')
+ res.clearCookie('user_id');
   res.redirect("/urls");
 });
 
 ///////////////REGISTRATION PAGE//////////////////////////
 router.get("/register", (req, res) => {
-  res.render("register", { user: req.cookies["username"] });
+  res.render("register", { user: req.cookies["user_id"] });
 })
 
 
@@ -175,17 +182,16 @@ router.post("/register", (req, res) => {
   }
   const id = generateRandomString();
   users[id] = { id, email, password };
-  res.cookie("username", id);
+  res.cookie("user_id", id);
   res.redirect("/urls");
 })
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-const emailLookup = () => {
+const emailLookup = (email) => {
   for (key in users) {
     if (users[key].email === email) {
       return true;
-    }
-  }
+  }}
   return false;
 }
 
