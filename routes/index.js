@@ -8,7 +8,7 @@ const urlDatabase = {
 
 //routes HTTP GET requests --> homepage
 router.get("/", (req, res) => {
-  res.send("Hello world!");
+  res.redirect("/urls");
 });
 
 
@@ -36,17 +36,16 @@ router.get("/urls/new", (req, res) => {
 // });
 
 router.get("/urls/:shortURL", (req, res) => {
-  //let templateVars = { shortURL: req.params.shortURL, longURL: req.params.longURL };
-  let longURL;
-
+  let templateVars = { shortURL: req.params.shortURL, longURL: req.params.longURL };
   for (let shortURL in urlDatabase) {
     if (shortURL === req.params.shortURL) {
       longUrl = urlDatabase[shortURL];
     }
   }
-  res.redirect("urls_show");
- // res.render("urls_show", templateVars);
+ res.render("urls_show", templateVars);
+
 });
+
 
 router.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[req.params.shortURL];
@@ -68,6 +67,7 @@ function generateRandomString() {
   }
   return urlDatabase.randomstring = '';
 }
+
 
 /*practice 
 
