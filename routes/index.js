@@ -128,7 +128,7 @@ function generateRandomString() {
 
 ///////////////LOGIN//////////////////////////
 router.get("/login", (req, res) => {
-  res.render("login", { username: users[req.cookies["username"]] });
+  res.render("login", { user: req.cookies["username"] });
 });
 
 router.post("/login", (req, res) => {
@@ -144,7 +144,7 @@ router.post("/login", (req, res) => {
     } else {
       res.send("Incorrect username and/or password!");
     }
-  }
+  } 
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
