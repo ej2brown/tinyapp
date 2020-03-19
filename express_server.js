@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser')
+const cookieSession = require('cookie-session');
 
 //server
 const PORT = 8080;
@@ -12,10 +12,13 @@ const indexRouter = require("./routes/index");
 //setup middlewares and frameworks as the callback fn 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser())
 app.use("/", indexRouter);
 
-
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);

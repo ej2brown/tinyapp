@@ -47,7 +47,7 @@ router.get("/hello", (req, res) => {
 
 ///////////////////URL_INDEX/////////////////////////
 router.get("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   // if (!userId) {
   //   return res.redirect("/login");
   // }
@@ -64,10 +64,10 @@ router.get("/urls", (req, res) => {
 
 ///////////////URL_NEW//////////////////////////////
 router.get("/urls/new", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session.user_id) {
     res.redirect("/login");
   } else {
-    res.render("urls_new", { user: users[(req.cookies["user_id"])] });
+    res.render("urls_new", { user: users[req.session.user_id] });
   }
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -75,10 +75,10 @@ router.get("/urls/new", (req, res) => {
 
 ///////////////////////NEW URL///////////////////////
 router.get("/urls/:shortURL", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   let templateVars = {
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.cookies["user_id"]]["shortURL"],
+    longURL: urlDatabase[req.session.user_id]["shortURL"],
     user: users[userId],
     email: users[userId].email
   };
@@ -86,15 +86,13 @@ router.get("/urls/:shortURL", (req, res) => {
 });
 
 router.post("/urls/new", (req, res) => {
-  let shortURL = generateRandomString();
-  urlDatabase[shortURL].longURL = LongURL;
-  res.redirect("/urls");
+  res.render("urls_new", { user: users[(req.session.user_id)]});
 });
 
 router.get("/u/:shortURL", (req, res) => {
   let longURL;
-  for (userIds in urlDatabase) {
-    for (shortUrls in urlDatabase[userIds]) {
+  for (const userIds in urlDatabase) {
+    for (const shortUrls in urlDatabase[userIds]) {
       if (shortUrls === req.params.shortURL) {
         longURL = urlDatabase[userIds][shortUrls];
       }
@@ -103,7 +101,7 @@ router.get("/u/:shortURL", (req, res) => {
       res.redirect(longURL);
     }
     if (!longURL) {
-      response.status(400).send("This short URL does not exist");
+      res.status(400).send("This short URL does not exist");
     }
   }
 });
@@ -112,7 +110,7 @@ router.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL].longURL = req.body.longURL;
-  urlDatabase[shortURL].userID = req.cookies["user_id"];
+  urlDatabase[shortURL].userID = req.session.user_id;
   res.redirect(`/urls/${shortURL}`);
 })
 
@@ -127,7 +125,7 @@ router.post("/urls/:shortURL", (req, res) => {
 
 router.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (urlDatabase[userId][shortURL] && urlDatabase.userId === userId) {
     delete urlDatabase[userId][shortURL];
     res.redirect("/urls");
@@ -153,22 +151,22 @@ function generateRandomString() {
     randomString += chars.substring(rnum, rnum + 1);
   }
   return randomString;
-};
+}
 
 ///////////////LOGIN PAGE////////////////////////////////
 router.get("/login", (req, res) => {
-  res.render("login", { user: req.cookies["user_id"] });
+  res.render("login", { user: req.session.user_id });
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
   const userId = emailLookup(email);
   console.log('user logged in', req.body);
-  if (!userId || !bcrypt.compareSync(password, hashedPassword)) {
+  if (!userId || !bcrypt.compareSync(password, users[userId].hashedPassword)) {
     res.status(403).send("Login Error: incorrect username and/or password!");
   } else {
     console.log('password is correct:');
-    res.cookie("user_id", email);
+    req.session.user_id = userId; //set use_id on session
     res.redirect("/urls");
   }
 });
@@ -176,13 +174,13 @@ router.post("/login", (req, res) => {
 
 
 router.post("/logout", function (req, res) {
-  res.clearCookie('user_id');
+  res.session = null;
   res.redirect("/urls");
 });
 
 ///////////////REGISTRATION PAGE///////////////////////////////
 router.get("/register", (req, res) => {
-  res.render("register", { user: req.cookies["user_id"] });
+  res.render("register", { user: users[req.session.user_id] });
 });
 
 //add a new user object to the global users object
@@ -194,15 +192,15 @@ router.post("/register", (req, res) => {
   } else if (emailLookup(email)) {
     res.status(400).send("Email already exists!");
   }
-  const id = generateRandomString();
-  users[id] = { id, email, hashedPassword };
-  res.cookie("user_id", id);
+  const userId = generateRandomString();
+  users[userId] = { userId, email, hashedPassword };
+  req.session.user_id = users[userId]; //set use_id on session
   res.redirect("/urls");
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 const emailLookup = (email) => {
-  for (key in users) {
+  for (const key in users) {
     if (users[key].email === email) {
       return key;
     }
@@ -213,9 +211,9 @@ const emailLookup = (email) => {
 const urlsForUsers = (id) => {
   const userId = id
   const url = {};
-  for (key in urlDatabase) {
+  for (const key in urlDatabase) {
     if (urlDatabase[key] === userId) {
-      for (key in urlDatabase[userId]) {
+      for (const key in urlDatabase[userId]) {
         url[key] = urlDatabase[userId][key];
       }
     }
