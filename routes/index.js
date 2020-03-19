@@ -1,31 +1,32 @@
 const express = require("express");
 const router = express.Router();
+const bcrypt = require('bcrypt');
 
 ///////////////DATABASE////////////////////////////
 
 const urlDatabase = {
-  "userRandomID": { 
-    "b2xVn2": "http://www.lighthouselabs.ca",  
+  "userRandomID": {
+    "b2xVn2": "http://www.lighthouselabs.ca",
     "9sm5xK": "http://www.google.com"
-   }, 
-  "user2RandomID": { 
-    "vHdhJq": "http://www.example.com",  
+  },
+  "user2RandomID": {
+    "vHdhJq": "http://www.example.com",
     "4CzNn7": "http://www.youtube.com"
-   }
+  }
 };
 
 const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    hashedPassword: bcrypt.hashSync("purple-monkey-dinosaur", 10)
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    hashedPassword: bcrypt.hashSync("dishwasher-funk", 10)
   }
-}
+};
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
@@ -47,18 +48,14 @@ router.get("/hello", (req, res) => {
 ///////////////////URL_INDEX/////////////////////////
 router.get("/urls", (req, res) => {
   const userId = req.cookies["user_id"];
-  if (!userId) {
-    return res.redirect("/login");
-  }
-  console.log(userId);
-  console.log(users);
-  console.log('user found');
-  console.log(users[userId]);
-  console.log(users[userId].email);
-  let templateVars = { urls: urlDatabase[userId], 
-                        user: userId, 
-                        email: users[userId].email
-                      }; 
+  // if (!userId) {
+  //   return res.redirect("/login");
+  // }
+  let templateVars = {
+    urls: urlDatabase[userId],
+    user: userId,
+    email: users[userId].email
+  };
   res.render("urls_index", templateVars);
 });
 
@@ -79,14 +76,14 @@ router.get("/urls/new", (req, res) => {
 ///////////////////////NEW URL///////////////////////
 router.get("/urls/:shortURL", (req, res) => {
   const userId = req.cookies["user_id"];
-  let templateVars = { shortURL: req.params.shortURL, 
-                        longURL: urlDatabase[req.cookies["user_id"]]["shortURL"], 
-                        user: users[userId],
-                        email: users[userId].email
-                      };
+  let templateVars = {
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.cookies["user_id"]]["shortURL"],
+    user: users[userId],
+    email: users[userId].email
+  };
   res.render("urls_show", templateVars);
 });
-
 
 router.post("/urls/new", (req, res) => {
   let shortURL = generateRandomString();
@@ -95,8 +92,20 @@ router.post("/urls/new", (req, res) => {
 });
 
 router.get("/u/:shortURL", (req, res) => {
-  const { longURL } = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
+  let longURL;
+  for (userIds in urlDatabase) {
+    for (shortUrls in urlDatabase[userIds]) {
+      if (shortUrls === req.params.shortURL) {
+        longURL = urlDatabase[userIds][shortUrls];
+      }
+    }
+    if (longURL) {
+      res.redirect(longURL);
+    }
+    if (!longURL) {
+      response.status(400).send("This short URL does not exist");
+    }
+  }
 });
 
 router.post("/urls", (req, res) => {
@@ -113,19 +122,20 @@ router.post("/urls/:shortURL", (req, res) => {
   const longURL = req.body.longURL;
   urlDatabase[shortURL] = longURL;
   res.redirect("/urls");
-})
+});
 
 
 router.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  const user = req.cookies["user"];
-  if (urlDatabase[shortURL] && urlDatabase[shortURL].user === user) {
-    delete urlDatabase[shortURL];
+  const userId = req.cookies["user_id"];
+  if (urlDatabase[userId][shortURL] && urlDatabase.userId === userId) {
+    delete urlDatabase[userId][shortURL];
     res.redirect("/urls");
   } else {
     res.send("failed");
   }
-})
+});
+
 
 // router.post("/urls", (req, res) => {
 //   let longURL = req.body; 
@@ -143,7 +153,7 @@ function generateRandomString() {
     randomString += chars.substring(rnum, rnum + 1);
   }
   return randomString;
-}
+};
 
 ///////////////LOGIN PAGE////////////////////////////////
 router.get("/login", (req, res) => {
@@ -153,14 +163,14 @@ router.get("/login", (req, res) => {
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
   const userId = emailLookup(email);
-  console.log('email exists:', email);
-  console.log('user exists:', userId);
-  if (!userId || users[userId].password !== password) {
+  console.log('user logged in', req.body);
+  if (!userId || !bcrypt.compareSync(password, hashedPassword)) {
     res.status(403).send("Login Error: incorrect username and/or password!");
-  }
-    console.log('password is correct:', password);
+  } else {
+    console.log('password is correct:');
     res.cookie("user_id", email);
     res.redirect("/urls");
+  }
 });
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -173,24 +183,22 @@ router.post("/logout", function (req, res) {
 ///////////////REGISTRATION PAGE///////////////////////////////
 router.get("/register", (req, res) => {
   res.render("register", { user: req.cookies["user_id"] });
-})
+});
 
 //add a new user object to the global users object
 router.post("/register", (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  if (!email || !hashedPassword) {
     res.status(400).send("Error occured while filing out the form");
   } else if (emailLookup(email)) {
     res.status(400).send("Email already exists!");
   }
   const id = generateRandomString();
-  console.log(id)
-  users[id] = { id, email, password };
-  console.log(users[id])
-  console.log(users)
+  users[id] = { id, email, hashedPassword };
   res.cookie("user_id", id);
   res.redirect("/urls");
-})
+});
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 const emailLookup = (email) => {
@@ -200,6 +208,19 @@ const emailLookup = (email) => {
     }
   }
   return false;
+};
+
+const urlsForUsers = (id) => {
+  const userId = id
+  const url = {};
+  for (key in urlDatabase) {
+    if (urlDatabase[key] === userId) {
+      for (key in urlDatabase[userId]) {
+        url[key] = urlDatabase[userId][key];
+      }
+    }
+    return url;
+  }
 }
 
 module.exports = router;

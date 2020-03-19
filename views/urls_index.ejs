@@ -10,6 +10,9 @@
 </head>
 <body>
   <%- include('partials/_header') %>
+  <% if (!user) {  %>
+  <%= window.alert("Login/register to see URLs") %>
+  <% }  %>
   <main style="margin: 1em;">
     <h3>My URLs</h3>
     <table class="table">
