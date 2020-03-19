@@ -8,13 +8,18 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-const users = {
-  "username1": {
-    username: "username1",
-    email: "u1@u.com",
-    password: "u1"
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
   }
-};
+}
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
@@ -153,5 +158,12 @@ router.post("/logout", function (req, res) {
  res.clearCookie('username')
   res.redirect("/urls");
 });
+
+///////////////REGISTER//////////////////////////
+router.get("/login", (req, res) => {
+  res.render("register");
+})
+
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 module.exports = router;
