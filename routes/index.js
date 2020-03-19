@@ -12,12 +12,12 @@ router.get("/", (req, res) => {
 });
 
 
-router.post("/urls", (req, res) => {
-  let longURL = req.body; 
-  let shortURL = generateRandomString();
-  urlDatabase[shortURL] = longURL;
-  res.send("Ok");
-});
+// router.post("/urls", (req, res) => {
+//   let longURL = req.body; 
+//   let shortURL = generateRandomString();
+//   urlDatabase[shortURL] = longURL;
+//   res.send("Ok");
+// });
 
 /*routes Gets Requests */
 router.get("/urls", (req, res) => {
@@ -29,26 +29,23 @@ router.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-router.post("/urls/new", (req, res) => {
-  let longURL = req.body; 
-  let shortURL = generateRandomString();
-  urlDatabase[shortURL] = longURL;  
-  const longURL = (longURL)
-});
+// router.post("/urls/new", (req, res) => {
+//   let longURL = req.body; 
+//   let shortURL = generateRandomString(req.params);
+
+// });
 
 router.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: req.params.longURL };
-  res.render("urls_show", templateVars);
-});
+  //let templateVars = { shortURL: req.params.shortURL, longURL: req.params.longURL };
+  let longURL;
 
-router.get("/u/:shortURL", (req, res) => {
-  const longURL = "";
   for (let shortURL in urlDatabase) {
     if (shortURL === req.params.shortURL) {
       longUrl = urlDatabase[shortURL];
     }
   }
   res.redirect("urls_show");
+ // res.render("urls_show", templateVars);
 });
 
 router.post("/urls/:shortURL/delete", (req, res) => {
@@ -56,6 +53,10 @@ router.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 })
 
+
+// router.post("/urls/urls_show", (req, res) => {
+//   urlDatabase[shortURL] = longURL;  
+// })
 
 function generateRandomString() {
   const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
