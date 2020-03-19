@@ -159,11 +159,20 @@ router.post("/logout", function (req, res) {
   res.redirect("/urls");
 });
 
-///////////////REGISTER//////////////////////////
-router.get("/login", (req, res) => {
-  res.render("register");
+///////////////REGISTRATION PAGE//////////////////////////
+router.get("/register", (req, res) => {
+  res.render("register", { user: req.cookies["username"] });
 })
 
+
+//add a new user object to the global users object
+router.post("/register", (req, res) => {
+  const { email, password } = req.body;
+  const id = generateRandomString();
+  users[id] = { id, email, password };
+  res.cookie("username", id);
+  res.redirect("/urls");
+})
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 module.exports = router;
