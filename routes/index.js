@@ -168,11 +168,25 @@ router.get("/register", (req, res) => {
 //add a new user object to the global users object
 router.post("/register", (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).send("Error occured while filing out the form");
+  } else if (emailLookup(email)) {
+    res.status(400).send("Email already exists!");
+  }
   const id = generateRandomString();
   users[id] = { id, email, password };
   res.cookie("username", id);
   res.redirect("/urls");
 })
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+const emailLookup = () => {
+  for (key in users) {
+    if (users[key].email === email) {
+      return true;
+    }
+  }
+  return false;
+}
 
 module.exports = router;
