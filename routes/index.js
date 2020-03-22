@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { emailLookupUser, urlsForUsers, generateRandomString, shortURLFinder } = require('../helpers');
+const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById } = require('../helpers');
 
 router.use(cookieSession({
   name: 'session',
@@ -57,16 +57,18 @@ router.get("/", (req, res) => {
 });
 
 //if user is logged in: renders index url page showing a list of users short URLS matching long URL
+//for urls_index -> redirected here
 router.get("/urls", (req, res) => {
-  console.log(req.session.user_id)
-  const userId = req.session.user_id;
-  if (req.session.user_id) {
+  const id = req.session.user_id;
+  const userId = getUserById(id, users);
+  console.log(userId)
+  if (userId) {
     let templateVars = {
-      urls: urlDatabase[req.session.user_id],
-      user: req.session.user_id,
+      urls: urlDatabase[userId],
+      user: userId,
       email: users[userId].email
     };
-    res.render("urls_index", templateVars);
+    res.render("urls_index", templateVars); //render urls_index
   }
   res.render("error", { error: "not logged in - please login or register" });
 });
@@ -76,35 +78,46 @@ router.get("/urls/new", (req, res) => {
   if (!req.session.user_id) {
     res.redirect("/login");
   } else {
-    res.render("urls_new", { email: users[req.session.user_id].email, user: users[req.session.user_id] });
+    const id = req.session.user_id;
+    const userId = getUserById(id, users);
+    let templateVars = {
+      urls: urlDatabase[userId],
+      user: userId,
+      email: users[userId].email
+    };
+    res.render("urls_new", templateVars);
   }
 });
 
 //if user is logged in and owns the URL for the given ID:
 router.get("/urls/:shortURL", (req, res) => {
-  let userId = req.session.user_id;
-  let shortURL = req.params.shortURL;
   //if user is not logged in
-  if (!userId) {
+  if (!req.session.user_id) {
     res.render("error", { error: "not logged in - please login or register" });
   }
-// if user is logged in, see if url matches that user
+  const id = req.session.user_id;
+  const userId = getUserById(id, users);
+  let shortURL = req.params.shortURL;
+  console.log(req.params.shortURL)
+
+  // if user is logged in, see if url matches that user
   if (userId) {
-    let templateVars = {
-      user: userId,
-      shortURL,
-      longURL: urlDatabase[req.params.shortURL].longURL,
-      email: users[userId].email
-    }
     //if a URL for the given ID does not exist:
-    if (!shortURLFinder(shortURL, urlDatabase)) {
-      res.render("error", { templateVars, error: "The URL entered does not exist" });
+    if (!getUserByShortURL(shortURL, urlDatabase)) {
+      res.render("error", { error: "The URL entered does not exist" });
     }
     //if user is logged it but does not own the URL with the given ID:
-    if (shortURLFinder(shortURL, urlDatabase) !== userId) {
-      res.render("error", { templateVars, error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
+    if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
+      res.render("error", { error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
     }
+
     //if user is logged in and owns the URL for the given ID:
+    let templateVars = {
+      shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL,
+      user: userId,
+      email: users[userId].email
+    }
     res.render("urls_show", templateVars);
   }
 });
@@ -123,7 +136,7 @@ router.get("/u/:shortURL", (req, res) => {
     res.redirect(longURL);
   }
   if (!longURL) {
-    res.render("error", { user: req.session.user_id, error: "URL does not exist" });
+    res.render("error", { error: "URL does not exist" });
   }
 });
 
@@ -137,25 +150,26 @@ router.post("/urls", (req, res) => {
   }
   const userId = req.session.user_id;
   const id = generateRandomString();
-  users[userId] = id;
-  console.log(users)
-  res.redirect(`/urls/${id}`);
+  users[userId].id = id;
+  console.log(users[userId].id);
+  res.redirect(`/urls/${id}`, { email: users[userId].email });
 })
 
 router.post("/urls/:shortURL", (req, res) => {
-  const userId = req.session.user_id;
+  const id = req.session.user_id;
+  const userId = getUserById(id, users);
   const shortURL = req.params.shortURL;
   //if user is not logged in
   if (!userId) {
-    res.render("error", { user: userId, error: "not logged in - please login or register" });
+    res.render("error", { error: "not logged in - please login or register" });
   }
   //if a URL for the given ID does not exist:
-  if (!shortURLFinder(shortURL, urlDatabase)) {
-    res.render("error", { user: userId, error: "The URL entered does not exist" });
+  if (!getUserByShortURL(shortURL, urlDatabase)) {
+    res.render("error", { error: "The URL entered does not exist" });
   }
   //if user is logged it but does not own the URL with the given ID:
-  if (shortURLFinder(shortURL, urlDatabase) !== userId) {
-    res.render("error", { user: userId, error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
+  if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
+    res.render("error", { error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
   }
 
   urlDatabase.userId.shortURL = req.body.longURL;
@@ -176,22 +190,28 @@ router.post("/urls/:userId/delete", (req, res) => {
 
 /////////////// LOGIN / REGISTRATION PAGE ///////////////////////
 router.get("/login", (req, res) => {
-  res.render("login", { user: req.session.user_id });
+  if (req.session.user_id) {
+    res.redirect("/urls");
+  }
+  res.render("login"); //render login
 });
 
 router.get("/register", (req, res) => {
-  res.render("register", { user: users[req.session.user_id] });
+  if (req.session.user_id) {
+    res.redirect("/urls");
+  }
+  res.render("register"); //render register
 });
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
-  const userId = emailLookupUser(email, users);
-  console.log('user logged in', req.body);
+  const userId = getUserByEmail(email, users);
+
   if (!userId || !bcrypt.compareSync(password, users[userId].hashedPassword)) {
     res.status(403).send("Login Error: incorrect username and/or password!");
   } else {
-    console.log('password is correct:');
-    req.session.user_id = userId; //set use_id vHdhJqon session
+    console.log('user logged in', userId); // to tell server which user has logged in
+    req.session.user_id = users[userId].id; //set use_id vHdhJqon session
     res.redirect("/urls");
   }
 });
@@ -203,15 +223,22 @@ router.post("/register", (req, res) => {
 
   if (!email || !hashedPassword) {
     res.status(400).send("Error occured while filing out the form");
-  } else if (emailLookupUser(email)) {
+  } else if (getUserByEmail(email, users)) {
     res.status(400).send("Email already exists!");
   }
-  const userId = generateRandomString();
-  users[userId] = { userId, email, hashedPassword };
-  req.session.user_id = users[userId]; //set use_id on session
+
+  //create new user
+  const emailSplit = email.split("@")
+  const userId = emailSplit[0]
+  const id = generateRandomString();
+  users[userId] = { id, email, hashedPassword };
+
+  //set use_id on session
+  req.session.user_id = users[userId];
   res.redirect("/urls");
 });
 
+//logout user by removing any session cookies
 router.post("/logout", function (req, res) {
   req.session = null;
   res.redirect("/urls");
