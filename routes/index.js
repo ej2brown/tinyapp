@@ -21,8 +21,8 @@ const urlDatabase = {
     "4CzNn7": "http://www.youtube.com"
   },
   "user3RandomID": {
-    "vHdhJq": "http://www.example.com",
-    "4CzNn7": "http://www.youtube.com"
+    "jodhJq": "http://www.facebook.com",
+    "g7zNn7": "http://www.gmail.com"
   }
 };
 
@@ -59,18 +59,17 @@ router.get("/", (req, res) => {
 //if user is logged in: renders index url page showing a list of users short URLS matching long URL
 //for urls_index -> redirected here
 router.get("/urls", (req, res) => {
+  if (!req.session.user_id) {
+    res.render("error", { error: "not logged in - please login or register" });
+  }
   const id = req.session.user_id;
   const userId = getUserById(id, users);
-  console.log(userId)
-  if (userId) {
     let templateVars = {
       urls: urlDatabase[userId],
       user: userId,
       email: users[userId].email
     };
     res.render("urls_index", templateVars); //render urls_index
-  }
-  res.render("error", { error: "not logged in - please login or register" });
 });
 
 //if user is logged in: a form which contains a text input field for a long URL
@@ -89,17 +88,15 @@ router.get("/urls/new", (req, res) => {
   }
 });
 
-//if user is logged in and owns the URL for the given ID:
+//if user is logged in and owns the URL for the given ID: shows short URL, long URL and option to change long URL
 router.get("/urls/:shortURL", (req, res) => {
   //if user is not logged in
-  if (!req.session.user_id) {
+  if (!req.session) {
     res.render("error", { error: "not logged in - please login or register" });
   }
   const id = req.session.user_id;
   const userId = getUserById(id, users);
   let shortURL = req.params.shortURL;
-  console.log(req.params.shortURL)
-
   // if user is logged in, see if url matches that user
   if (userId) {
     //if a URL for the given ID does not exist:
@@ -114,7 +111,7 @@ router.get("/urls/:shortURL", (req, res) => {
     //if user is logged in and owns the URL for the given ID:
     let templateVars = {
       shortURL,
-      longURL: urlDatabase[req.params.shortURL].longURL,
+      longURL: urlDatabase[userId].longURL,
       user: userId,
       email: users[userId].email
     }
