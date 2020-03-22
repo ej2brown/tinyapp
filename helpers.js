@@ -9,13 +9,13 @@ const generateRandomString = () => {
   return randomString;
 }
 
-const emailLookupUser = (email, users) => {
-  for (const key in users) {
-    if (users[key].email === email) {
-      return key;
+const getUserByEmail = (email, users) => {
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      return userId;
     }
   }
-  return false;
+  return undefined;
 };
 
 const urlsForUsers = (userId, urlDatabase) => {
@@ -42,7 +42,7 @@ const shortURLFinder = (shortURL, urlDatabase) => {
 }
 
     module.exports = {
-      emailLookupUser,
+      getUserByEmail,
       urlsForUsers,
       generateRandomString,
       shortURLFinder

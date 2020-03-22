@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { emailLookupUser, urlsForUsers, generateRandomString, shortURLFinder } = require('../functions');
+const { emailLookupUser, urlsForUsers, generateRandomString, shortURLFinder } = require('../helpers');
 
 router.use(cookieSession({
   name: 'session',
