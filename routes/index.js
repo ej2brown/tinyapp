@@ -1,15 +1,26 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const cookieSession = require('cookie-session');
+const { emailLookupUser, urlsForUsers, generateRandomString, shortURLFinder } = require('../functions');
 
-///////////////DATABASE////////////////////////////
+router.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
+/////////////// DATABASES ////////////////////////////
 const urlDatabase = {
   "userRandomID": {
     "b2xVn2": "http://www.lighthouselabs.ca",
     "9sm5xK": "http://www.google.com"
   },
   "user2RandomID": {
+    "vHdhJq": "http://www.example.com",
+    "4CzNn7": "http://www.youtube.com"
+  },
+  "user3RandomID": {
     "vHdhJq": "http://www.example.com",
     "4CzNn7": "http://www.youtube.com"
   }
@@ -25,70 +36,80 @@ const users = {
     id: "user2RandomID",
     email: "user2@example.com",
     hashedPassword: bcrypt.hashSync("dishwasher-funk", 10)
+  },
+  "user3RandomID": {
+    id: "user3RandomID",
+    email: "u3@u.com",
+    hashedPassword: bcrypt.hashSync("u3", 10)
   }
 };
-//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
+////////////////// GET REQUESTS /////////////////////////
 
-//routes HTTP GET requests --> homepage
+//homepage 
 router.get("/", (req, res) => {
-  res.redirect("/urls");
+  if (!req.session.user_id) {
+    res.redirect("/login");
+  } else {
+    res.redirect("/urls");
+  }
 });
 
-//to see a JSON string representing the entire urlDatabase object
-router.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-//shows purpose of ejs files
-router.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
-
-///////////////////URL_INDEX/////////////////////////
+//if user is logged in: renders index url page showing a list of users short URLS matching long URL
 router.get("/urls", (req, res) => {
+  console.log(req.session.user_id)
   const userId = req.session.user_id;
-  // if (!userId) {
-  //   return res.redirect("/login");
-  // }
-  let templateVars = {
-    urls: urlDatabase[userId],
-    user: userId,
-    email: users[userId].email
-  };
-  res.render("urls_index", templateVars);
+  if (req.session.user_id) {
+    let templateVars = {
+      urls: urlDatabase[req.session.user_id],
+      user: req.session.user_id,
+      email: users[userId].email
+    };
+    res.render("urls_index", templateVars);
+  }
+  res.render("error", { error: "not logged in - please login or register" });
 });
 
-//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-
-///////////////URL_NEW//////////////////////////////
+//if user is logged in: a form which contains a text input field for a long URL
 router.get("/urls/new", (req, res) => {
   if (!req.session.user_id) {
     res.redirect("/login");
   } else {
-    res.render("urls_new", { user: users[req.session.user_id] });
+    res.render("urls_new", { email: users[req.session.user_id].email, user: users[req.session.user_id] });
   }
 });
-//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
-///////////////////////NEW URL///////////////////////
+//if user is logged in and owns the URL for the given ID:
 router.get("/urls/:shortURL", (req, res) => {
-  const userId = req.session.user_id;
-  let templateVars = {
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.session.user_id]["shortURL"],
-    user: users[userId],
-    email: users[userId].email
-  };
-  res.render("urls_show", templateVars);
+  let userId = req.session.user_id;
+  let shortURL = req.params.shortURL;
+  //if user is not logged in
+  if (!userId) {
+    res.render("error", { error: "not logged in - please login or register" });
+  }
+// if user is logged in, see if url matches that user
+  if (userId) {
+    let templateVars = {
+      user: userId,
+      shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL,
+      email: users[userId].email
+    }
+    //if a URL for the given ID does not exist:
+    if (!shortURLFinder(shortURL, urlDatabase)) {
+      res.render("error", { templateVars, error: "The URL entered does not exist" });
+    }
+    //if user is logged it but does not own the URL with the given ID:
+    if (shortURLFinder(shortURL, urlDatabase) !== userId) {
+      res.render("error", { templateVars, error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
+    }
+    //if user is logged in and owns the URL for the given ID:
+    res.render("urls_show", templateVars);
+  }
 });
 
-router.post("/urls/new", (req, res) => {
-  res.render("urls_new", { user: users[(req.session.user_id)]});
-});
-
+//if URL exists, direct to long URL page
 router.get("/u/:shortURL", (req, res) => {
   let longURL;
   for (const userIds in urlDatabase) {
@@ -97,33 +118,51 @@ router.get("/u/:shortURL", (req, res) => {
         longURL = urlDatabase[userIds][shortUrls];
       }
     }
-    if (longURL) {
-      res.redirect(longURL);
-    }
-    if (!longURL) {
-      res.status(400).send("This short URL does not exist");
-    }
+  }
+  if (longURL) {
+    res.redirect(longURL);
+  }
+  if (!longURL) {
+    res.render("error", { user: req.session.user_id, error: "URL does not exist" });
   }
 });
 
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+////////////////// POST REQUESTS ///////////////////////
+//generates a short URL, saves it, and associates it with the user
 router.post("/urls", (req, res) => {
-  const shortURL = generateRandomString();
-  urlDatabase[shortURL] = {};
-  urlDatabase[shortURL].longURL = req.body.longURL;
-  urlDatabase[shortURL].userID = req.session.user_id;
-  res.redirect(`/urls/${shortURL}`);
+  if (!req.session.user_id) {
+    res.render("error", { error: "not logged in - please login or register" });
+  }
+  const userId = req.session.user_id;
+  const id = generateRandomString();
+  users[userId] = id;
+  console.log(users)
+  res.redirect(`/urls/${id}`);
 })
 
-
 router.post("/urls/:shortURL", (req, res) => {
+  const userId = req.session.user_id;
   const shortURL = req.params.shortURL;
-  const longURL = req.body.longURL;
-  urlDatabase[shortURL] = longURL;
+  //if user is not logged in
+  if (!userId) {
+    res.render("error", { user: userId, error: "not logged in - please login or register" });
+  }
+  //if a URL for the given ID does not exist:
+  if (!shortURLFinder(shortURL, urlDatabase)) {
+    res.render("error", { user: userId, error: "The URL entered does not exist" });
+  }
+  //if user is logged it but does not own the URL with the given ID:
+  if (shortURLFinder(shortURL, urlDatabase) !== userId) {
+    res.render("error", { user: userId, error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
+  }
+
+  urlDatabase.userId.shortURL = req.body.longURL;
   res.redirect("/urls");
 });
 
-
-router.post("/urls/:shortURL/delete", (req, res) => {
+router.post("/urls/:userId/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
   if (urlDatabase[userId][shortURL] && urlDatabase.userId === userId) {
@@ -133,63 +172,38 @@ router.post("/urls/:shortURL/delete", (req, res) => {
     res.send("failed");
   }
 });
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
-// router.post("/urls", (req, res) => {
-//   let longURL = req.body; 
-//   let shortURL = generateRandomString();
-//   urlDatabase[shortURL] = longURL;
-//   res.send("Ok");
-// });
-
-function generateRandomString() {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
-  const stringLength = 6;
-  let randomString = '';
-  for (let i = 0; i < stringLength; i++) {
-    let rnum = Math.floor(Math.random() * chars.length);
-    randomString += chars.substring(rnum, rnum + 1);
-  }
-  return randomString;
-}
-
-///////////////LOGIN PAGE////////////////////////////////
+/////////////// LOGIN / REGISTRATION PAGE ///////////////////////
 router.get("/login", (req, res) => {
   res.render("login", { user: req.session.user_id });
 });
 
+router.get("/register", (req, res) => {
+  res.render("register", { user: users[req.session.user_id] });
+});
+
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
-  const userId = emailLookup(email);
+  const userId = emailLookupUser(email, users);
   console.log('user logged in', req.body);
   if (!userId || !bcrypt.compareSync(password, users[userId].hashedPassword)) {
     res.status(403).send("Login Error: incorrect username and/or password!");
   } else {
     console.log('password is correct:');
-    req.session.user_id = userId; //set use_id on session
+    req.session.user_id = userId; //set use_id vHdhJqon session
     res.redirect("/urls");
   }
 });
-//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
-router.post("/logout", function (req, res) {
-  res.session = null;
-  res.redirect("/urls");
-});
-
-///////////////REGISTRATION PAGE///////////////////////////////
-router.get("/register", (req, res) => {
-  res.render("register", { user: users[req.session.user_id] });
-});
-
-//add a new user object to the global users object
+//add a new user to the user database
 router.post("/register", (req, res) => {
   const { email, password } = req.body;
   const hashedPassword = bcrypt.hashSync(password, 10);
+
   if (!email || !hashedPassword) {
     res.status(400).send("Error occured while filing out the form");
-  } else if (emailLookup(email)) {
+  } else if (emailLookupUser(email)) {
     res.status(400).send("Email already exists!");
   }
   const userId = generateRandomString();
@@ -197,28 +211,11 @@ router.post("/register", (req, res) => {
   req.session.user_id = users[userId]; //set use_id on session
   res.redirect("/urls");
 });
-//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-const emailLookup = (email) => {
-  for (const key in users) {
-    if (users[key].email === email) {
-      return key;
-    }
-  }
-  return false;
-};
-
-const urlsForUsers = (id) => {
-  const userId = id
-  const url = {};
-  for (const key in urlDatabase) {
-    if (urlDatabase[key] === userId) {
-      for (const key in urlDatabase[userId]) {
-        url[key] = urlDatabase[userId][key];
-      }
-    }
-    return url;
-  }
-}
+router.post("/logout", function (req, res) {
+  req.session = null;
+  res.redirect("/urls");
+});
+//\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 module.exports = router;
