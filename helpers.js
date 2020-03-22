@@ -31,8 +31,10 @@ const urlsForUsers = (userId, urlDatabase) => {
 }
 
 const getUserByShortURL = (shortURL, urlDatabase) => {
+  console.log("SHORT", shortURL)
   for (const userId in urlDatabase) {
     for (const dbShortURL in urlDatabase[userId]) {
+      console.log("DBSHORT", dbShortURL)
       if (dbShortURL === shortURL) {
         return userId
       }
