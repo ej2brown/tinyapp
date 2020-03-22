@@ -111,7 +111,7 @@ router.get("/urls/:shortURL", (req, res) => {
     //if user is logged in and owns the URL for the given ID:
     let templateVars = {
       shortURL,
-      longURL: urlDatabase[userId].longURL,
+      longURL: urlDatabase[userId][shortURL],
       user: userId,
       email: users[userId].email
     }
@@ -169,7 +169,7 @@ router.post("/urls/:shortURL", (req, res) => {
     res.render("error", { error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
   }
 
-  urlDatabase.userId.shortURL = req.body.longURL;
+  urlDatabase[userId][shortURL] = req.body.longURL;
   res.redirect("/urls");
 });
 
