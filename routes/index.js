@@ -173,10 +173,13 @@ router.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls");
 });
 
-router.post("/urls/:userId/delete", (req, res) => {
+//if logged and owns the short URL 
+router.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
-  if (urlDatabase[userId][shortURL] && urlDatabase.userId === userId) {
+  if(getUserByShortURL(shortURL, urlDatabase) === userId) {
+
+  // if (urlDatabase[userId][shortURL] && urlDatabase[userId] === userId) {
     delete urlDatabase[userId][shortURL];
     res.redirect("/urls");
   } else {
@@ -240,6 +243,7 @@ router.post("/logout", function (req, res) {
   req.session = null;
   res.redirect("/urls");
 });
+
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 module.exports = router;
