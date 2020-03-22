@@ -30,7 +30,7 @@ const urlsForUsers = (userId, urlDatabase) => {
   }
 }
 
-const shortURLFinder = (shortURL, urlDatabase) => {
+const getUserByShortURL = (shortURL, urlDatabase) => {
   for (const userId in urlDatabase) {
     for (const shortString in userId) {
       if (shortString === shortURL) {
@@ -41,9 +41,19 @@ const shortURLFinder = (shortURL, urlDatabase) => {
   return false;
 }
 
-    module.exports = {
-      getUserByEmail,
-      urlsForUsers,
-      generateRandomString,
-      shortURLFinder
-    };
+const getUserById = (id, users) => {
+  for (const userId in users) {
+    if (userId === id) {
+      return userId;
+    }
+  }
+  return undefined;
+}
+
+module.exports = {
+  getUserByEmail,
+  urlsForUsers,
+  generateRandomString,
+  getUserByShortURL,
+  getUserById
+};
