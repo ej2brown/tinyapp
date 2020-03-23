@@ -4,10 +4,11 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["screenshot description"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_register.png?raw=true)
-!["screenshot description"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_login.png?raw=true)
-!["screenshot description"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_create_new.png?raw=true)
-!["screenshot description"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_edit_ft_showing_cookies.png?raw=true)
+!["Registration Page: requests email and password"](https://github.com/ej2brown/tinyapp/blob/master/docs/urls_register.png?raw=true)
+!["Login Page: requests users email and password"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_login.png?raw=true)
+!["URL Index List: Shows the users their URLs and special short snipppet"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_index.png?raw=true)
+!["New URL: Creates a short URL snippet for the given long URL"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_create_new.png?raw=true)
+!["Edit Page: Allows users to edit their URLS"](https://github.com/ej2brown/tinyapp/blob/master/docs/url_edit_ft_showing_cookies.png?raw=true)
 
 ## Dependencies
 
