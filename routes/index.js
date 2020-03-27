@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById } = require('../helpers');
+const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById, userIsLoggedIn } = require('../helpers');
+const methodOverride = require('method-override');
+
+router.use(methodOverride('_method'));
 
 router.use(cookieSession({
   name: 'session',
@@ -49,7 +52,7 @@ const users = {
 
 //homepage 
 router.get("/", (req, res) => {
-  if (!req.session.user_id) {
+  if (!userIsLoggedIn(req.session.user_id)) {
     res.redirect("/login");
   } else {
     res.redirect("/urls");
@@ -59,8 +62,8 @@ router.get("/", (req, res) => {
 //if user is logged in: renders index url page showing a list of users short URLS matching long URL
 //for urls_index -> redirected here
 router.get("/urls", (req, res) => {
-  if (!req.session.user_id) {
-    res.render("error", { error: "not logged in - please login or register" });
+  if (!userIsLoggedIn(req.session.user_id)) {
+        res.render("error", { error: "not logged in - please login or register" });
   }
   const id = req.session.user_id;
   const userId = getUserById(id, users);
@@ -74,8 +77,8 @@ router.get("/urls", (req, res) => {
 
 //if user is logged in: a form which contains a text input field for a long URL
 router.get("/urls/new", (req, res) => {
-  if (!req.session.user_id) {
-    res.redirect("/login");
+  if (!userIsLoggedIn(req.session.user_id)) {
+        res.redirect("/login");
   } else {
     const id = req.session.user_id;
     const userId = getUserById(id, users);
@@ -91,8 +94,8 @@ router.get("/urls/new", (req, res) => {
 //if user is logged in and owns the URL for the given ID: shows short URL, long URL and option to change long URL
 router.get("/urls/:shortURL", (req, res) => {
   //if user is not logged in
-  if (!req.session) {
-    res.render("error", { error: "not logged in - please login or register" });
+  if (!userIsLoggedIn(req.session.user_id)) {
+        res.render("error", { error: "not logged in - please login or register" });
   }
   const id = req.session.user_id;
   const userId = getUserById(id, users);
@@ -142,7 +145,7 @@ router.get("/u/:shortURL", (req, res) => {
 ////////////////// POST REQUESTS ///////////////////////
 //generates a short URL, saves it, and associates it with the user
 router.post("/urls", (req, res) => {
-  if (!req.session.user_id) {
+  if (!userIsLoggedIn(req.session.user_id)) {
     res.render("error", { error: "not logged in - please login or register" });
   }
   const userId = req.session.user_id;
@@ -193,14 +196,14 @@ router.get("/login", (req, res) => {
   if (req.session.user_id) {
     res.redirect("/urls");
   }
-  res.render("login"); //render login
+  res.render("login", { user: req.session.user_id }); //render login
 });
 
 router.get("/register", (req, res) => {
   if (req.session.user_id) {
     res.redirect("/urls");
   }
-  res.render("register"); //render register
+  res.render("register", { user: req.session.user_id }); //render register
 });
 
 router.post("/login", (req, res) => {
