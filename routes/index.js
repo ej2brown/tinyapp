@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById, userIsLoggedIn } = require('../helpers');
+const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById } = require('../helpers');
 const methodOverride = require('method-override');
 
 router.use(methodOverride('_method'));
@@ -52,7 +52,7 @@ const users = {
 
 //homepage 
 router.get("/", (req, res) => {
-  if (!userIsLoggedIn(req.session.user_id)) {
+  if (!req.session.user_id) {
     res.redirect("/login");
   } else {
     res.redirect("/urls");
@@ -62,7 +62,7 @@ router.get("/", (req, res) => {
 //if user is logged in: renders index url page showing a list of users short URLS matching long URL
 //for urls_index -> redirected here
 router.get("/urls", (req, res) => {
-  if (!userIsLoggedIn(req.session.user_id)) {
+  if (!req.session.user_id) {
         res.render("error", { error: "not logged in - please login or register" });
   }
   const id = req.session.user_id;
@@ -77,7 +77,7 @@ router.get("/urls", (req, res) => {
 
 //if user is logged in: a form which contains a text input field for a long URL
 router.get("/urls/new", (req, res) => {
-  if (!userIsLoggedIn(req.session.user_id)) {
+  if (!req.session.user_id) {
         res.redirect("/login");
   } else {
     const id = req.session.user_id;
@@ -94,7 +94,7 @@ router.get("/urls/new", (req, res) => {
 //if user is logged in and owns the URL for the given ID: shows short URL, long URL and option to change long URL
 router.get("/urls/:shortURL", (req, res) => {
   //if user is not logged in
-  if (!userIsLoggedIn(req.session.user_id)) {
+  if (!(req.session.user_id)) {
         res.render("error", { error: "not logged in - please login or register" });
   }
   const id = req.session.user_id;
@@ -145,13 +145,12 @@ router.get("/u/:shortURL", (req, res) => {
 ////////////////// POST REQUESTS ///////////////////////
 //generates a short URL, saves it, and associates it with the user
 router.post("/urls", (req, res) => {
-  if (!userIsLoggedIn(req.session.user_id)) {
-    res.render("error", { error: "not logged in - please login or register" });
+  if (!(req.session.user_id)) {
+        res.render("error", { error: "not logged in - please login or register" });
   }
   const userId = req.session.user_id;
   const id = generateRandomString();
   users[userId].id = id;
-  console.log(users[userId].id);
   res.redirect(`/urls/${id}`, { email: users[userId].email });
 })
 
@@ -180,8 +179,20 @@ router.post("/urls/:shortURL", (req, res) => {
 router.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
-  if(getUserByShortURL(shortURL, urlDatabase) === userId) {
 
+  if (!userId) {
+    res.render("error", { error: "not logged in - please login or register" });
+  }
+  //if a URL for the given ID does not exist:
+  if (!getUserByShortURL(shortURL, urlDatabase)) {
+    res.render("error", { error: "The URL entered does not exist" });
+  }
+  //if user is logged it but does not own the URL with the given ID:
+  if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
+    res.render("error", { error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
+  }
+  
+  if(getUserByShortURL(shortURL, urlDatabase) === userId) {
   // if (urlDatabase[userId][shortURL] && urlDatabase[userId] === userId) {
     delete urlDatabase[userId][shortURL];
     res.redirect("/urls");
@@ -213,7 +224,6 @@ router.post("/login", (req, res) => {
   if (!userId || !bcrypt.compareSync(password, users[userId].hashedPassword)) {
     res.status(403).send("Login Error: incorrect username and/or password!");
   } else {
-    console.log('user logged in', userId); // to tell server which user has logged in
     req.session.user_id = users[userId].id; //set use_id vHdhJqon session
     res.redirect("/urls");
   }
