@@ -1,3 +1,4 @@
+//generates a sring for users id 
 const generateRandomString = () => {
   const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
   const stringLength = 6;
@@ -9,6 +10,7 @@ const generateRandomString = () => {
   return randomString;
 }
 
+//search users list for user is matching the email
 const getUserByEmail = (email, users) => {
   for (const userId in users) {
     if (users[userId].email === email) {
@@ -18,6 +20,7 @@ const getUserByEmail = (email, users) => {
   return undefined;
 };
 
+//searches url database for urls matching the users id
 const urlsForUsers = (userId, urlDatabase) => {
   const url = {};
   for (const key in urlDatabase) {
@@ -30,6 +33,7 @@ const urlsForUsers = (userId, urlDatabase) => {
   }
 }
 
+//searches url database for user id matching the string id
 const getUserByShortURL = (shortURL, urlDatabase) => {
   console.log("SHORT", shortURL)
   for (const userId in urlDatabase) {
@@ -43,6 +47,7 @@ const getUserByShortURL = (shortURL, urlDatabase) => {
   return false;
 }
 
+//searches users list for matching id
 const getUserById = (id, users) => {
   for (const userId in users) {
     if (userId === id) {
@@ -52,10 +57,11 @@ const getUserById = (id, users) => {
   return undefined;
 }
 
+
 module.exports = {
   getUserByEmail,
   urlsForUsers,
   generateRandomString,
   getUserByShortURL,
-  getUserById
+  getUserById,
 };
