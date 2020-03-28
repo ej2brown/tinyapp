@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { getUserByEmail, urlsForUsers, generateRandomString, getUserByShortURL, getUserById } = require('../helpers');
+const { getUserByEmail, generateRandomString, getUserByShortURL, getUserById } = require('../helpers');
 const methodOverride = require('method-override');
 
 router.use(methodOverride('_method'));
@@ -59,15 +59,15 @@ router.get("/", (req, res) => {
   }
 });
 
-//if user is logged in: renders index url page showing a list of users short URLS matching long URL
-//for urls_index -> redirected here
+//renders index url page showing a list of users short URLS matching long URL
 router.get("/urls", (req, res) => {
   if (!req.session.user_id) {
-        res.render("error", { error: "not logged in - please login or register" });
+    res.render("error", { error: "not logged in - please login or register" });
   }
+  //user is logged in:
   const id = req.session.user_id;
   const userId = getUserById(id, users);
-    let templateVars = {
+  let templateVars = {
       urls: urlDatabase[userId],
       user: userId,
       email: users[userId].email
@@ -143,6 +143,7 @@ router.get("/u/:shortURL", (req, res) => {
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ////////////////// POST REQUESTS ///////////////////////
+
 //generates a short URL, saves it, and associates it with the user
 router.post("/urls", (req, res) => {
   if (!(req.session.user_id)) {
