@@ -175,31 +175,27 @@ router.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls");
 });
 
-//if logged and owns the short URL 
-router.post("/urls/:shortURL/delete", (req, res) => {
+//uses method override in <form> to use the delete method
+router.delete("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
 
   if (!userId) {
     res.render("error", { error: "not logged in - please login or register" });
   }
-  //if a URL for the given ID does not exist:
   if (!getUserByShortURL(shortURL, urlDatabase)) {
     res.render("error", { error: "The URL entered does not exist" });
   }
-  //if user is logged it but does not own the URL with the given ID:
   if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
     res.render("error", { error: "The URL entered belongs to another user -please enter an URL that belongs to your account" });
   }
-  
   if(getUserByShortURL(shortURL, urlDatabase) === userId) {
-  // if (urlDatabase[userId][shortURL] && urlDatabase[userId] === userId) {
     delete urlDatabase[userId][shortURL];
     res.redirect("/urls");
   } else {
     res.send("failed");
   }
-});
+})
 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 /////////////// LOGIN / REGISTRATION PAGE ///////////////////////
