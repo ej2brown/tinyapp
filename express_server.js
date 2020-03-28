@@ -1,18 +1,18 @@
-const express = require("express");
+/* - express.js is a node.js web server framework
+   - allows us to make HTTP requests on port 8080
+   - start the server by running node express_server.js in your terminal*/
+const express = require('express');
 const app = express();
-const bodyParser = require("body-parser");
-
-//server
 const PORT = 8080;
 
-//modularize routes
-const indexRouter = require("./routes/index");
+const bodyParser = require('body-parser');   //handles HTTP POST requests
+const indexRouter = require('./routes/index');
 
-//setup middlewares and frameworks as the callback fn 
-app.set("view engine", "ejs");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use("/", indexRouter);
+app.set('view engine', 'ejs');  // tells the express app to use EJS as its templating engine.
+app.use(bodyParser.urlencoded({ extended: true }));  //setup body-parser middleware
+app.use('/', indexRouter);     //modularize routes for endpoints starting with '/' 
 
+//console.log that the server is active
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

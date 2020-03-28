@@ -1,6 +1,6 @@
 //generates a sring for users id 
 const generateRandomString = () => {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz';
   const stringLength = 6;
   let randomString = '';
   for (let i = 0; i < stringLength; i++) {
@@ -35,10 +35,10 @@ const urlsForUsers = (userId, urlDatabase) => {
 
 //searches url database for user id matching the string id
 const getUserByShortURL = (shortURL, urlDatabase) => {
-  console.log("SHORT", shortURL)
+  console.log('SHORT', shortURL)
   for (const userId in urlDatabase) {
     for (const dbShortURL in urlDatabase[userId]) {
-      console.log("DBSHORT", dbShortURL)
+      console.log('DBSHORT', dbShortURL)
       if (dbShortURL === shortURL) {
         return userId
       }
