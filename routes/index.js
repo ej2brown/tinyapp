@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();  //allows router to handle all route requests
 
 const bcrypt = require('bcrypt'); //for encrypted cookies and sessions
-const cookieSession = require('cookie-session'); 
+const cookieSession = require('cookie-session');
 const methodOverride = require('method-override');
 
-const { getUserByEmail, 
-        generateRandomString, 
-        getUserByShortURL, 
-        getUserById 
-      } = require('../helpers');
+const { getUserByEmail,
+  generateRandomString,
+  getUserByShortURL,
+  getUserById
+} = require('../helpers');
 
 router.use(methodOverride('_method'));  //allows us to modify the form method from PUT or DELETE
 
@@ -72,28 +72,28 @@ router.get('/urls', (req, res) => {
   if (!req.session.user_id) {
     res.render('error', { error: 'not logged in - please login or register' });
   }
+
   //user is logged in:
-  const id = req.session.user_id;
-  const userId = getUserById(id, users);
-  let templateVars = {
-      urls: urlDatabase[userId],
-      user: userId,
-      email: users[userId].email
+  if (req.session.user_id) {
+    const id = req.session.user_id;
+    let templateVars = {
+      urls: urlDatabase[id],
+      user: users[(req.session.user_id)]
     };
     res.render('urls_index', templateVars); //render urls_index
+  }
 });
 
 //if user is logged in: a form which contains a text input field for a long URL
 router.get('/urls/new', (req, res) => {
   if (!req.session.user_id) {
-        res.redirect('/login');
-  } else {
+    res.redirect('/login');
+  }
+  if (req.session.user_id) {
     const id = req.session.user_id;
-    const userId = getUserById(id, users);
     let templateVars = {
-      urls: urlDatabase[userId],
-      user: userId,
-      email: users[userId].email
+      urls: urlDatabase[id],
+      user: users[(req.session.user_id)]
     };
     res.render('urls_new', templateVars);
   }
@@ -103,7 +103,7 @@ router.get('/urls/new', (req, res) => {
 router.get('/urls/:shortURL', (req, res) => {
   //if user is not logged in
   if (!(req.session.user_id)) {
-        res.render('error', { error: 'not logged in - please login or register' });
+    res.render('error', { error: 'not logged in - please login or register' });
   }
   const id = req.session.user_id;
   const userId = getUserById(id, users);
@@ -123,8 +123,7 @@ router.get('/urls/:shortURL', (req, res) => {
     let templateVars = {
       shortURL,
       longURL: urlDatabase[userId][shortURL],
-      user: userId,
-      email: users[userId].email
+      user: users[(req.session.user_id)]
     }
     res.render('urls_show', templateVars);
   }
@@ -154,12 +153,16 @@ router.get('/u/:shortURL', (req, res) => {
 //generates a short URL, saves it, and associates it with the user
 router.post('/urls', (req, res) => {
   if (!(req.session.user_id)) {
-        res.render('error', { error: 'Not logged in - please login or register' });
+    res.render('error', { error: 'Not logged in - please login or register' });
   }
-  const userId = req.session.user_id;
-  const id = generateRandomString();
-  users[userId].id = id;
-  res.redirect(`/urls/${id}`, { email: users[userId].email });
+
+  const newShortURL = generateRandomString();
+  const id = req.session.user_id;
+
+  // const userId = getUserById(id, users);
+  urlDatabase[id] = { [newShortURL]: req.body.longURL };
+
+  return res.redirect(`/urls/${newShortURL}`);
 })
 
 router.post('/urls/:shortURL', (req, res) => {
@@ -197,7 +200,7 @@ router.delete('/urls/:shortURL', (req, res) => {
   if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
     res.render('error', { error: 'The URL entered belongs to another user -please enter an URL that belongs to your account' });
   }
-  if(getUserByShortURL(shortURL, urlDatabase) === userId) {
+  if (getUserByShortURL(shortURL, urlDatabase) === userId) {
     delete urlDatabase[userId][shortURL];
     res.redirect('/urls');
   } else {
@@ -211,14 +214,14 @@ router.get('/login', (req, res) => {
   if (req.session.user_id) {
     res.redirect('/urls');
   }
-  res.render('login', { user: req.session.user_id }); //render login
+  res.render('login', { user: users[(req.session.user_id)] }); //render login
 });
 
 router.get('/register', (req, res) => {
   if (req.session.user_id) {
     res.redirect('/urls');
   }
-  res.render('register', { user: req.session.user_id }); //render register
+  res.render('register', { user: users[(req.session.user_id)] }); //render register
 });
 
 router.post('/login', (req, res) => {
@@ -235,23 +238,25 @@ router.post('/login', (req, res) => {
 
 //add a new user to the user database
 router.post('/register', (req, res) => {
+  //collects information filled out on the registration page
   const { email, password } = req.body;
-  const hashedPassword = bcrypt.hashSync(password, 10);
 
-  if (!email || !hashedPassword) {
+  //error check
+  if (!email || !password) {
     res.status(400).send('Error occured while filing out the form');
   } else if (getUserByEmail(email, users)) {
     res.status(400).send('Email already exists!');
   }
 
   //create new user
-  const emailSplit = email.split('@')
-  const userId = emailSplit[0]
+  // const emailSplit = email.split('@')
+  // const userId = emailSplit[0]
+  const hashedPassword = bcrypt.hashSync(password, 10);
   const id = generateRandomString();
-  users[userId] = { id, email, hashedPassword };
+  users[id] = { id, email, hashedPassword };
 
-  //set use_id on session
-  req.session.user_id = users[userId];
+  //set user_id on session
+  req.session.user_id = id;
   res.redirect('/urls');
 });
 
