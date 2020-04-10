@@ -55,6 +55,17 @@ const getUserById = (id, users) => {
   return undefined;
 }
 
+const getLongURL = (shortURL, urlDatabase) => {
+  for (const userId in urlDatabase) {
+    for (const dbShortURL in urlDatabase[userId]) {
+      if (dbShortURL === shortURL) {
+        return urlDatabase[userId][shortURL]
+      }
+    }
+  }
+  return false;
+}
+
 
 module.exports = {
   getUserByEmail,
@@ -62,4 +73,5 @@ module.exports = {
   generateRandomString,
   getUserByShortURL,
   getUserById,
+  getLongURL
 };

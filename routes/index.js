@@ -6,9 +6,10 @@ const cookieSession = require('cookie-session');
 const methodOverride = require('method-override');
 
 const { getUserByEmail,
-  generateRandomString,
-  getUserByShortURL,
-  getUserById
+        generateRandomString,
+        getUserByShortURL,
+        getUserById,
+        getLongURL
 } = require('../helpers');
 
 router.use(methodOverride('_method'));  //allows us to modify the form method from PUT or DELETE
@@ -42,7 +43,7 @@ const users = {
   'userRandomID': {
     id: 'userRandomID',
     email: 'user@example.com',
-    hashedPassword: bcrypt.hashSync('purple-monkey-dinosaur', 10)
+    hashedPassword: bcrypt.hashSync('password', 10)
   },
   'user2RandomID': {
     id: 'user2RandomID',
@@ -71,9 +72,8 @@ router.get('/', (req, res) => {
 //renders index url page showing a list of users short URLS matching long URL
 router.get('/urls', (req, res) => {
   if (!req.session.user_id) {
-    res.render('error', { error: 'not logged in - please login or register' });
+    res.render('error', { error: 'Not logged in - please login or register' });
   }
-
   //user is logged in:
   if (req.session.user_id) {
     const id = req.session.user_id;
@@ -87,6 +87,7 @@ router.get('/urls', (req, res) => {
 
 //if user is logged in: a form which contains a text input field for a long URL
 router.get('/urls/new', (req, res) => {
+  console.log(urlDatabase)
   if (!req.session.user_id) {
     return res.redirect('/login');
   }
@@ -106,13 +107,15 @@ router.get('/urls/:shortURL', (req, res) => {
   if (!(req.session.user_id)) {
     res.render('error', { error: 'not logged in - please login or register' });
   }
+
   const id = req.session.user_id;
   let shortURL = req.params.shortURL;
+  console.log(id,shortURL)
   // if user is logged in, see if url matches that user
   if (id) {
     //if a URL for the given ID does not exist:
     if (!getUserByShortURL(shortURL, urlDatabase)) {
-      res.render('error', { error: 'The URL entered does not exist' });
+      res.render('error', { error: 'The URL entered does not exist!' });
     }
     //if user is logged it but does not own the URL with the given ID:
     if (getUserByShortURL(shortURL, urlDatabase) !== id) {
@@ -140,7 +143,13 @@ router.get('/u/:shortURL', (req, res) => {
     }
   }
   if (longURL) {
-    return res.redirect(longURL);
+    const protocolExist = longURL.includes('http')
+    if (protocolExist) {
+      return res.redirect(longURL);
+    }
+    if (!protocolExist) {
+    return res.redirect(`http://+${longURL}`);
+    }
   }
   if (!longURL) {
     res.render('error', { error: 'URL does not exist' });
@@ -152,17 +161,15 @@ router.get('/u/:shortURL', (req, res) => {
 
 //generates a short URL, saves it, and associates it with the user
 router.post('/urls', (req, res) => {
-
   if (!(req.session.user_id)) {
     res.render('error', { error: 'Not logged in - please login or register' });
   }
+  console.log('urlDatabase',urlDatabase)
 
-  const newShortURL = generateRandomString();
   const id = req.session.user_id;
+  const newShortURL = generateRandomString();
 
-  // const userId = getUserById(id, users);
-  urlDatabase[id] = { [newShortURL]: req.body.longURL };
-
+  urlDatabase[id] = {[newShortURL]: req.body.longURL};
   return res.redirect(`/urls/${newShortURL}`);
 })
 
@@ -170,20 +177,21 @@ router.post('/urls/:shortURL', (req, res) => {
   const id = req.session.user_id;
   const userId = getUserById(id, users);
   const shortURL = req.params.shortURL;
+
   //if user is not logged in
   if (!userId) {
-    res.render('error', { error: 'Not logged in - please login or register' });
+    return res.render('error', { error: 'Not logged in - please login or register' });
   }
   //if a URL for the given ID does not exist:
   if (!getUserByShortURL(shortURL, urlDatabase)) {
-    res.render('error', { error: 'The URL entered does not exist' });
+    return res.render('error', { error: 'The URL entered does not exist' });
   }
   //if user is logged it but does not own the URL with the given ID:
   if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
-    res.render('error', { error: 'The URL entered belongs to another user -please enter an URL that belongs to your account' });
+    return res.render('error', { error: 'The URL entered belongs to another user -please enter an URL that belongs to your account' });
   }
-  
-  urlDatabase[id] = { [shortURL]: req.body.longURL };
+  urlDatabase[id] = {[shortURL]: req.body.longURL};
+
   return res.redirect('/urls');
 });
 
@@ -191,15 +199,18 @@ router.post('/urls/:shortURL', (req, res) => {
 router.delete('/urls/:shortURL', (req, res) => {
   const shortURL = req.params.shortURL;
   const userId = req.session.user_id;
+  console.log('userId',userId)
+  console.log(getUserByShortURL(shortURL, urlDatabase))
+  console.log(userId)
 
   if (!userId) {
-    res.render('error', { error: 'Not logged in - please login or register' });
+    return res.render('error', { error: 'Not logged in - please login or register' });
   }
   if (!getUserByShortURL(shortURL, urlDatabase)) {
-    res.render('error', { error: 'The URL entered does not exist' });
+    return res.render('error', { error: 'The URL entered does not exist' });
   }
   if (getUserByShortURL(shortURL, urlDatabase) !== userId) {
-    res.render('error', { error: 'The URL entered belongs to another user -please enter an URL that belongs to your account' });
+    return res.render('error', { error: 'The URL entered belongs to another user -please enter an URL that belongs to your account' });
   }
   if (getUserByShortURL(shortURL, urlDatabase) === userId) {
     delete urlDatabase[userId][shortURL];
@@ -220,7 +231,7 @@ router.get('/login', (req, res) => {
 
 router.get('/register', (req, res) => {
   if (req.session.user_id) {
-    return res.redirect('/urls');
+    res.redirect('/urls');
   }
   res.render('register', { user: users[(req.session.user_id)] }); //render register
 });
@@ -230,7 +241,7 @@ router.post('/login', (req, res) => {
   const userId = getUserByEmail(email, users);
 
   if (!userId || !bcrypt.compareSync(password, users[userId].hashedPassword)) {
-    res.status(403).send('Login Error: incorrect username and/or password!');
+    return res.status(403).send('Login Error: incorrect username and/or password!');
   } else {
     req.session.user_id = users[userId].id; //set use_id vHdhJqon session
     return res.redirect('/urls');
@@ -256,6 +267,8 @@ router.post('/register', (req, res) => {
 
   //set user_id on session
   req.session.user_id = id;
+  console.log(id)
+  console.log(req.session.user_id = id)
   return res.redirect('/urls');
 });
 
